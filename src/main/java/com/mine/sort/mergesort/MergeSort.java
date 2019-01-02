@@ -1,5 +1,7 @@
 package com.mine.sort.mergesort;
 
+import com.mine.util.NumberUtil;
+
 import java.util.Arrays;
 
 /**
@@ -51,47 +53,58 @@ public class MergeSort {
 
     /**
      * 一趟归并排序，
-     * 一趟中，要确定的有两个数据，上一趟完成后的表arr，上一趟完成后的有序子表的长度len
-     * 这个时候，每一个子序列都已经完成了各自的排序，需要合并了，合并后的长度为2*len
+     * 明确两个数据，排序序列arr，本次归并中有序子表的长度（上一次归并完成后）
+     * 这一趟归并后，有序子表的长度变成了2*len
+     * 可能遇到3种情况：长度均为len的子表的归并，len长度的和另一个小于len的子表的归并，以及只剩下一个小于len的子表不处理
      *
-     * @param arr 待排序的数组序列
-     * @param len 该趟排序中有序子表的长度
+     * @param arr    待排序列
+     * @param length arr序列的长度
+     * @param len    上一趟归并完成后有序子表的长度，也就是现在的子表长度，这一次归并完成后会变成2*len，默认开始的时候就是1
      */
-    public void mergeOnce(int[] arr, int len) {
-        //i代表的是起始的low的索引，通过这个去推断mid和high的位置
-        //限制条件是i+2*len肯定不能超过数组
-        //为什么是2*len，因为归并需要两个len的长度，下一次归并肯定是2个len之后的了，所以需要*2
-        //后面的i+2*len是为了计算下一个位置，中间的判断位置的i+2*len并不是为了计算，只是为了判断是否满足要求
-        //归并长度为len的子序列，要求2个都要是len的长度
-        //已经知道本次的起始位置low位置了，如果下一次low的值超过了length-1，说明这次不满足两个都是len，如果下一次仍旧有值，那么说明满足2个长度都为len
-        //在这里的判断并不是比较的是2个len的长度，这样也不好得到以前所有的len的长度，干脆直接获取下一个的low值判断是否仍在数组范围内
-        int i = 0
-        for (; i + 2 * len <= arr.length - 1; i += 2 * len) {
-            merge(arr, i, i + len, i + 2 * len);
+    public void mergeOnce(int[] arr, int length, int len) {
+        //归并长度为len的两个子序列
+        //i指的arr中的索引，这个索引是针对于长度为len的子序列说的：i+=2*len，每一次都是跨过2个子序列后，第三个序列的起始位置
+        //【1】首先是arr=0的位置，跨过两个长度为len的索引，即，i,i+len-1,i+2*len-1
+        //【2】循环一次后，i变为了i+2*len，又开始了归并两个子序列过程
+        //【3】这个时候，判断这两个子序列的最后一个元素的位置，在已经计算了i的条件下，最后一个high位置为i+2*len-1，如果在数组下标范围内，那么说明符合要求
+        //     注意，这个并不是判断的下一次的起始位置，而是判断的这一次归并的结束位置
+        //要求，2个长度为len的子序列，所有的数组下标索引都要在length-1中，这样就好了理解了，不要纠结等于号
+        int i = 0;
+        for (; i + 2 * len - 1 <= length - 1; i = i + 2 * len) {
+            merge(arr, i, i + len - 1, i + 2 * len - 1);
         }
-        //归并长度不满足2个都是len的子序列，有可能最后还剩下2个或者一个的
-        //注意此时i的值，应该是最后一次的low值，一定要注意
-        //如果最后剩下2个，那么需要归并长度为len和长度小于len的子序列
-        //如果最后剩下1个，那么需要直接把这个不用管就可以了
-        if (i + len < arr.length - 1) {
-            merge(arr, i, i + len, arr.length - 1);
+        //归并长度为len和长度不足len的两个子序列
+        //现在有三个位置，分别是i,i+len,i+2*len-1，已经明确i+2*len-1>length-1，那么分为了2种情况
+        //在length-1固定的情况下[i+len应该到哪里，但是固定了在length位置，如果超出了，说明小于一个len]
+        //【1】i+len-1<length-1，说明剩下部分大于一个len
+        //【2】i+len-1>=length-1，说明剩下的不足一个len，或者等于一个len
+        if (i + len - 1 < length - 1) {
+            merge(arr, i, i + len - 1, length - 1);
         }
     }
 
     /**
      * 完整的归并排序,2路归并排序,
-     * 关键在于需要多少次，也就是长度=次数*2
+     * 关键在于需要多少趟
+     * 一定要注意区分的是有序子表的长度，什么叫这次的长度，什么叫这次完成后的长度
+     * n个记录进行二路归并排序时，归并的次数为多少呢？
      */
-    public void asc(int[] arr){
-        int i  = 1;
-        int len = 1;
-        while
+    public void asc(int[] arr, int length) {
+        //len指的是：每一归并排序的时候，子序列的长度
+        //归并第一次的时候，len为1，归并完成后，len=2
+        //归并第二次的时候，len为2，归并完成后，len=4
+        //归并第三次的时候，len为4，归并完成后，len=8
+        //所以说，不管第几次，自豪要归并的时候，小于最大的值，那么你就去归并排序把，就可以了
+        //一定是小于，并不是小于等于
+        for (int len = 1; len < length; len = len * 2) {
+            mergeOnce(arr, length, len);
+        }
     }
 
     public static void main(String[] args) {
         MergeSort mergeSort = new MergeSort();
-        int[] arr = {26, 34, 78, 88, 18, 22, 26, 94};
-        mergeSort.merge(arr, 0, 3, 7);
+        int[] arr = {34, 26, 78, 88, 18, 22, 26, 94};
+        mergeSort.asc(arr, arr.length);
         System.out.println(Arrays.toString(arr));
     }
 
